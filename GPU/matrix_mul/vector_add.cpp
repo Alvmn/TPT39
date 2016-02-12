@@ -70,6 +70,39 @@ float rand_float() {
   return float(rand()) / float(RAND_MAX) * 20.0f - 10.0f;
 }
 
+// matrixPopulateRand fills a given matrix with random float values.
+void matrixPopulateRand(float *matrix, unsigned rows, unsigned cols) {
+  for (unsigned i = 0; i < rows; i++) {
+    for (unsigned j = 0; j < cols; j++) {
+      matrix[i * cols + j] = rand_float();
+    }
+  }
+}
+
+// matrixPrint prints a formatted version of the matrix using printf
+void matrixPrint(float *matrix, unsigned rows, unsigned cols) {
+  for (unsigned i = 0; i < rows; i++) {
+    printf("[");
+    for (unsigned j = 0; j < cols; j++) {
+      printf(" %7.2f ", matrix[i * cols + j]);
+    }
+    printf("]\n");
+  }
+}
+
+// matrixMultiply multiplies two input matrices with proper dimensions
+void matrixMultiply(float *A, float *B, float *X, unsigned dim1,
+                    unsigned dimShared, unsigned dim2) {
+  for (unsigned i = 0; i < dim1; i++) {
+    for (unsigned j = 0; j < dim2; j++) {
+      for (unsigned k = 0; k < dimShared; k++) {
+        X[i * dim2 + j] += A[i * dimShared + k] * B[k * dim2 + j];
+      }
+    }
+  }
+}
+
+
 int main()
 {
      char char_buffer[STRING_BUFFER_LEN];
@@ -91,12 +124,10 @@ int main()
 
 //--------------------------------------------------------------------
 const unsigned N = 256; //0;
-const unsigned M = 128;
-const unsigned K = 326;
 float *input_a;//=(float *) malloc(sizeof(float)*N);
 float *input_b;//=(float *) malloc(sizeof(float)*N);
-float *output=(float *) malloc(sizeof(float)*M *N);
-float *ref_output=(float *) malloc(sizeof(float)*M *N);
+float *output=(float *) malloc(sizeof(float)*N *N);
+float *ref_output=(float *) malloc(sizeof(float)*N *N);
 cl_mem input_a_buf; // num_devices elements
 cl_mem input_b_buf; // num_devices elements
 cl_mem output_buf; // num_devices elements
@@ -149,16 +180,16 @@ struct timespec startc, stopc, startbuf, stopbuf;
 */
 	  clock_gettime( CLOCK_REALTIME,&startbuf);
 		input_a_buf = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR|CL_MEM_READ_ONLY,
-       M*K* sizeof(float), NULL, &status);
+       N*N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for input A");
 
     input_b_buf = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR|CL_MEM_READ_ONLY,
-        K*N* sizeof(float), NULL, &status);
+        N*N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for input B");
 
     // Output buffer.
     output_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-        M*N* sizeof(float), NULL, &status);
+        N*N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output");
 
 	  clock_gettime( CLOCK_REALTIME,&stopbuf);
@@ -171,11 +202,11 @@ struct timespec startc, stopc, startbuf, stopbuf;
 	  cl_event kernel_event,finish_event;
 		//Maping
 		input_a = (float *)clEnqueueMapBuffer(queue, input_a_buf, CL_TRUE,
-					CL_MAP_WRITE,0, M * K* sizeof(float), 0, NULL, &write_event[0],&errcode);
+					CL_MAP_WRITE,0, N *N* sizeof(float), 0, NULL, &write_event[0],&errcode);
 			checkError(errcode, "Failed to map input A");
 
 			input_b = (float *)clEnqueueMapBuffer(queue, input_b_buf, CL_TRUE,
-					CL_MAP_WRITE, 0, K * N* sizeof(float), 0, NULL, &write_event[1],&errcode);
+					CL_MAP_WRITE, 0, N * N* sizeof(float), 0, NULL, &write_event[1],&errcode);
 			checkError(errcode, "Failed to map input B");
 			// Map to host memory
 				//output = (float *)clEnqueueMapBuffer(queue, output_buf, CL_TRUE,
@@ -189,12 +220,24 @@ size_t size;
 
 		time (&start);
 		clock_gettime( CLOCK_REALTIME,&startc);
-		for(unsigned j = 0; j < N; ++j) {
+
+
+
+		for(unsigned j = 0; j < N*N; j++) {
 		      input_a[j] = rand_float();
 		      input_b[j] = rand_float();
-		      ref_output[j] = input_a[j] + input_b[j];
 		      //printf("ref %f\n",ref_output[j]);
 		    }
+	  for(unsigned i = 0; i < N; i++) {
+				for(unsigned j = 0; j < N; j++) {
+					for(unsigned k = 0; k < N; k++) {
+
+			    		ref_output[i*N + j] += input_a[j*N + k] * input_b[i + k*N];
+			    		//printf("ref %f\n",ref_output[j]);
+					}
+			 	}
+					}
+
 		time (&end);
 		clock_gettime( CLOCK_REALTIME,&stopc);
 
@@ -223,11 +266,14 @@ size_t size;
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &output_buf);
     checkError(status, "Failed to set argument 3");
 
+		status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &N);
+		checkError(status, "Failed to set argument 4");
+
 
 		clEnqueueUnmapMemObject(queue,input_a_buf,input_a,0,NULL,NULL);
 		clEnqueueUnmapMemObject(queue,input_b_buf,input_b,0,NULL,NULL);
 
-    const size_t global_work_size[2] = {M, N};
+    const size_t global_work_size[2] = {N, N};
     status = clEnqueueNDRangeKernel(queue, kernel, 2, NULL,
         global_work_size, NULL, 2, write_event, &kernel_event);
     checkError(status, "Failed to launch kernel");
@@ -248,7 +294,8 @@ size_t size;
    diff++;
 	 printf ("GPU took %.8lf seconds to run.\n\n", diffc );
 // Verify results.
-bool pass = true;
+/*
+
 
 for(unsigned j = 0; j < N && pass; ++j) {
 			//	if((input_b[j]-1.0) > 1.0e-5f) {
@@ -259,6 +306,19 @@ for(unsigned j = 0; j < N && pass; ++j) {
 				pass = false;
       }
 }
+
+*/
+bool pass = true;
+printf("%f %f %f\n", output[255], output[256], output[257]);
+for(unsigned i = 0; i < N*N && pass; i++) {
+	 if(fabsf(output[i] - ref_output[i]) > 1.0e-5f) {
+		 printf("Failed verification @ index [%d]\nOutput: %f\nReference: %f\n",
+				 i, output[i], ref_output[i]);
+		 pass = false;
+	 }
+ }
+
+
 float sum_vect=0;
 for(unsigned int i=0; i< N; i++) {
 	sum_vect+=output[i];
