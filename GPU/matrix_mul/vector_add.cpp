@@ -90,11 +90,13 @@ int main()
 
 
 //--------------------------------------------------------------------
-const unsigned N = 40960000; //0;
+const unsigned N = 256; //0;
+const unsigned M = 128;
+const unsigned K = 326;
 float *input_a;//=(float *) malloc(sizeof(float)*N);
 float *input_b;//=(float *) malloc(sizeof(float)*N);
-float *output=(float *) malloc(sizeof(float)*N);
-float *ref_output=(float *) malloc(sizeof(float)*N);
+float *output=(float *) malloc(sizeof(float)*M *N);
+float *ref_output=(float *) malloc(sizeof(float)*M *N);
 cl_mem input_a_buf; // num_devices elements
 cl_mem input_b_buf; // num_devices elements
 cl_mem output_buf; // num_devices elements
@@ -147,16 +149,16 @@ struct timespec startc, stopc, startbuf, stopbuf;
 */
 	  clock_gettime( CLOCK_REALTIME,&startbuf);
 		input_a_buf = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR|CL_MEM_READ_ONLY,
-       N* sizeof(float), NULL, &status);
+       M*K* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for input A");
 
     input_b_buf = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR|CL_MEM_READ_ONLY,
-        N* sizeof(float), NULL, &status);
+        K*N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for input B");
 
     // Output buffer.
     output_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-        N* sizeof(float), NULL, &status);
+        M*N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for output");
 
 	  clock_gettime( CLOCK_REALTIME,&stopbuf);
@@ -169,11 +171,11 @@ struct timespec startc, stopc, startbuf, stopbuf;
 	  cl_event kernel_event,finish_event;
 		//Maping
 		input_a = (float *)clEnqueueMapBuffer(queue, input_a_buf, CL_TRUE,
-					CL_MAP_WRITE,0, N* sizeof(float), 0, NULL, &write_event[0],&errcode);
+					CL_MAP_WRITE,0, M * K* sizeof(float), 0, NULL, &write_event[0],&errcode);
 			checkError(errcode, "Failed to map input A");
 
 			input_b = (float *)clEnqueueMapBuffer(queue, input_b_buf, CL_TRUE,
-					CL_MAP_WRITE, 0,N* sizeof(float), 0, NULL, &write_event[1],&errcode);
+					CL_MAP_WRITE, 0, K * N* sizeof(float), 0, NULL, &write_event[1],&errcode);
 			checkError(errcode, "Failed to map input B");
 			// Map to host memory
 				//output = (float *)clEnqueueMapBuffer(queue, output_buf, CL_TRUE,
@@ -225,9 +227,9 @@ size_t size;
 		clEnqueueUnmapMemObject(queue,input_a_buf,input_a,0,NULL,NULL);
 		clEnqueueUnmapMemObject(queue,input_b_buf,input_b,0,NULL,NULL);
 
-    const size_t global_work_size = N;
-    status = clEnqueueNDRangeKernel(queue, kernel, 1, NULL,
-        &global_work_size, NULL, 2, write_event, &kernel_event);
+    const size_t global_work_size[2] = {M, N};
+    status = clEnqueueNDRangeKernel(queue, kernel, 2, NULL,
+        global_work_size, NULL, 2, write_event, &kernel_event);
     checkError(status, "Failed to launch kernel");
 		status=clWaitForEvents(1,&kernel_event);
 			checkError(status, "Failed  wait");
