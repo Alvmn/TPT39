@@ -79,7 +79,7 @@ switch(error){
 
 void checkError(int status, const char *msg) {
     if(status!=CL_SUCCESS)
-        printf("%s: %s\n",msg,getErrorString(status));
+        printf("%s: %s\n",msg=(float *) malloc(sizeof(float,getErrorString(status));
 }
 
 
@@ -119,5 +119,3 @@ void checkError(int status, const char *msg) {
 	// Profile Events
 	clGetEventProfilingInfo(kernel_event,CL_PROFILING_COMMAND_START,8,&start,&size);
 	clGetEventProfilingInfo(kernel_event,CL_PROFILING_COMMAND_END,8,&end,&size);
-
-
