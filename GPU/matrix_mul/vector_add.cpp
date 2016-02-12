@@ -126,7 +126,7 @@ int main()
 const unsigned N = 256; //0;
 float *input_a;//=(float *) malloc(sizeof(float)*N);
 float *input_b;//=(float *) malloc(sizeof(float)*N);
-float *output=(float *) malloc(sizeof(float)*N *N);
+float *output;//=(float *) malloc(sizeof(float)*N *N);
 float *ref_output=(float *) malloc(sizeof(float)*N *N);
 cl_mem input_a_buf; // num_devices elements
 cl_mem input_b_buf; // num_devices elements
@@ -172,7 +172,7 @@ struct timespec startc, stopc, startbuf, stopbuf;
     input_b_buf = clCreateBuffer(context, CL_MEM_READ_ONLY,
         N* sizeof(float), NULL, &status);
     checkError(status, "Failed to create buffer for input B");
-
+/
     // Output buffer.
     output_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
         N* sizeof(float), NULL, &status);
@@ -209,9 +209,9 @@ struct timespec startc, stopc, startbuf, stopbuf;
 					CL_MAP_WRITE, 0, N * N* sizeof(float), 0, NULL, &write_event[1],&errcode);
 			checkError(errcode, "Failed to map input B");
 			// Map to host memory
-				//output = (float *)clEnqueueMapBuffer(queue, output_buf, CL_TRUE,
-				//		CL_MAP_READ, 0,N* sizeof(float),  0, NULL, NULL,&errcode);
-				//checkError(errcode, "Failed to map output");
+				output = (float *)clEnqueueMapBuffer(queue, output_buf, CL_TRUE,
+						CL_MAP_READ, 0,N* sizeof(float),  0, NULL, NULL,&errcode);
+				checkError(errcode, "Failed to map output");
 
 size_t size;
 				// Wait for a specific event
@@ -228,6 +228,11 @@ size_t size;
 		      input_b[j] = rand_float();
 		      //printf("ref %f\n",ref_output[j]);
 		    }
+				clock_gettime( CLOCK_REALTIME,&stopc);
+
+				diffc= stopc.tv_sec-startc.tv_sec + (double)(stopc.tv_nsec -startc.tv_nsec)/(double)BILLION;
+				printf ("CPU took %.8lf seconds to generate the vectors.\n\n", diffc );
+		clock_gettime( CLOCK_REALTIME,&startc);
 	  for(unsigned i = 0; i < N; i++) {
 				for(unsigned j = 0; j < N; j++) {
 					for(unsigned k = 0; k < N; k++) {
@@ -237,13 +242,11 @@ size_t size;
 					}
 			 	}
 					}
-
+					clock_gettime( CLOCK_REALTIME,&stopc);
+					diffc= stopc.tv_sec-startc.tv_sec + (double)(stopc.tv_nsec -startc.tv_nsec)/(double)BILLION;
+					printf ("CPU took %.8lf seconds to calculate the multiplication\n\n", diffc );
 		time (&end);
-		clock_gettime( CLOCK_REALTIME,&stopc);
 
-		diff = difftime (end,start);
-		diffc= stopc.tv_sec-startc.tv_sec + (double)(stopc.tv_nsec -startc.tv_nsec)/(double)BILLION;
-			printf ("CPU took %.8lf seconds to generate the vectors.\n\n", diffc );
 
 	/*
     status = clEnqueueWriteBuffer(queue, input_a_buf, CL_FALSE,
@@ -251,7 +254,7 @@ size_t size;
     checkError(status, "Failed to transfer input A");
 
     status = clEnqueueWriteBuffer(queue, input_b_buf, CL_FALSE,
-        0, N* sizeof(float), input_b, 0, NULL, &write_event[1]);
+        0, N* sizeoprintf("%f %f %f\n", output[255]f(float), input_b, 0, NULL, &write_event[1]);
     checkError(status, "Failed to transfer input B");
 */
     // Set kernel arguments.
@@ -312,7 +315,7 @@ bool pass = true;
 printf("%f %f %f\n", output[255], output[256], output[257]);
 for(unsigned i = 0; i < N*N && pass; i++) {
 	 if(fabsf(output[i] - ref_output[i]) > 1.0e-5f) {
-		 printf("Failed verification @ index [%d]\nOutput: %f\nReference: %f\n",
+		 printf("Verification failed in #[%d]\nOutput: %f\nReference: %f\n",
 				 i, output[i], ref_output[i]);
 		 pass = false;
 	 }
