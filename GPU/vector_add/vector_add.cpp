@@ -221,6 +221,10 @@ size_t size;
     status = clSetKernelArg(kernel, argi++, sizeof(cl_mem), &output_buf);
     checkError(status, "Failed to set argument 3");
 
+
+		clEnqueueUnmapMemObject(queue,input_a_buf,input_a,0,NULL,NULL);
+		clEnqueueUnmapMemObject(queue,input_b_buf,input_b,0,NULL,NULL);
+
     const size_t global_work_size = N;
     status = clEnqueueNDRangeKernel(queue, kernel, 1, NULL,
         &global_work_size, NULL, 2, write_event, &kernel_event);
@@ -257,6 +261,10 @@ float sum_vect=0;
 for(unsigned int i=0; i< N; i++) {
 	sum_vect+=output[i];
 }
+for(int i=0; i<10;i++){
+	printf("%f + %f = %f\n", input_a[i],input_b[i],output[i]  );
+}
+
 printf("Sum of all numbers is = %f\n\n",sum_vect);
     // Release local events.
     clReleaseEvent(write_event[0]);
