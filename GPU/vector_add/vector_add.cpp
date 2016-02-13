@@ -261,11 +261,8 @@ float sum_vect=0;
 for(unsigned int i=0; i< N; i++) {
 	sum_vect+=output[i];
 }
-for(int i=0; i<10;i++){
-	printf("%f + %f = %f\n", input_a[i],input_b[i],output[i]  );
-}
 
-printf("Sum of all numbers is = %f\n\n",sum_vect);
+printf("Average of the vector is = %f\n\n",sum_vect/N);
     // Release local events.
     clReleaseEvent(write_event[0]);
     clReleaseEvent(write_event[1]);
