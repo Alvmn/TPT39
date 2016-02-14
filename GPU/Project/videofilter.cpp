@@ -305,7 +305,6 @@ int main(int, char **) {
   printf("Total processing time: %.8f seconds \n\n", tot);
   outputVideo.release();
   camera.release();
-
   // printf("FPS %.2lf .\n", 299.0 / tot);
 
   return EXIT_SUCCESS;
