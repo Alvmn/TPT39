@@ -134,7 +134,7 @@ int main(int, char **) {
 
   struct timespec startc, stopc;
   time_t start, end;
-  double diff, tot, diffc;
+  double tot, diffc;
   int count = 0;
   const char *windowName = "filter"; // Name shown in the GUI window.
 
@@ -274,8 +274,8 @@ int main(int, char **) {
     cout << "Finished" << endl;
     time(&end);
 	  clock_gettime( CLOCK_REALTIME,&stopc);
-    diff = difftime(end, start);
     diffc= stopc.tv_sec-startc.tv_sec + (double)(stopc.tv_nsec -startc.tv_nsec)/(double)BILLION;
+    tot += diffc;
     printf ("GPU took %.8lf seconds to process the frame.\n\n", diffc );
 
     Mat result(cameraFrame.size(), CV_8UC1, h_C);
@@ -286,8 +286,7 @@ int main(int, char **) {
 #ifdef SHOW
     imshow(windowName, displayframe);
 #endif
-    diff = difftime(end, start);
-    tot += diff;
+
 
     // Release local events
 
@@ -303,9 +302,10 @@ int main(int, char **) {
   clReleaseProgram(program);
   clReleaseContext(context);
   clFinish(queue);
-
+  printf("Total processing time: %.8f seconds \n\n", tot);
   outputVideo.release();
   camera.release();
+
   // printf("FPS %.2lf .\n", 299.0 / tot);
 
   return EXIT_SUCCESS;
